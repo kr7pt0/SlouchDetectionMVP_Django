@@ -1,0 +1,104 @@
+{% load staticfiles %}
+<html>
+<head>
+  <title>Slouch MVP</title>
+  <link rel="stylesheet" href="{% static "js/bootstrap/bootstrap.min.css" %}">
+  <style>
+    h1 {
+      font-size: 3em;
+      font-weight: bold;
+      color: #555555;
+      text-align: center;
+      margin-top: 30px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+ 
+<body style="background-color: lightgrey">
+  <h1>
+      {{what}}
+  </h1>
+
+  <div class="row" style="margin: auto;">
+    <div class="col-md-6" style="text-align: right; padding: 0 5px;">
+      <span id="my_camera"></span>
+    </div>
+    <div class="col-md-6" style="text-align: left; padding: 0 5px;">
+      <img src="" id="result" width="640px">
+    </div>
+  </div>
+  <div class="text-center">
+    <button class="btn btn-success btn-lg" style="margin-top: 10px;" onClick="start_snapping()">Start Processing</button>
+    <button class="btn btn-success btn-lg" style="margin-top: 10px;" onClick="stop_snapping()">Stop Processing</button>
+    <form action="{{ request.build_absolute_uri }}upload/" method="POST" enctype="multipart/form-data" id="upload_form">
+        {% csrf_token %}
+    </form>
+  </div>
+
+  <script src="{% static "js/jquery-3.3.1.min.js" %}"></script>
+  <script src="{% static "js/bootstrap/bootstrap.min.js" %}"></script>
+  <script src="{% static "js/webcam.min.js" %}"></script>
+  
+  <!-- Configure a few settings and attach camera -->
+  <script language="JavaScript">
+    Webcam.set({
+      width: 640,
+      height: 480,
+      image_format: 'jpeg',
+      jpeg_quality: 100
+    });
+    Webcam.attach( '#my_camera' );
+  </script>
+  
+  <!-- Code to handle taking the snapshot and displaying it locally -->
+  <script language="JavaScript">
+    var timer = null;
+    
+    function take_snapshot() {
+      // take snapshot and get image data & post to the /upload/ api
+      Webcam.snap( function(data_uri) {
+        // display results in page
+        var img = new Image();
+        img.src = data_uri;
+
+        var form = $('#upload_form');
+        var formData = new FormData(form[0]);
+        formData.append("photoUpload", img.src);
+
+        $.ajax({
+          type:'POST',
+          url: form.attr('action'),
+          data:formData,
+          cache:false,
+          contentType: false,
+          processData: false,
+          success:function(data){
+            var d = new Date();
+            var n = d.getTime();
+            $('#result').prop('src', data + '#' + n); 
+          }
+        });  
+      });
+    }
+    
+    // start webcam capturing at the interval
+    function start_snapping() {
+      if (!timer) {
+        take_snapshot();
+        // set interval here
+        timer = setInterval( take_snapshot, 2000 );
+      }
+    }
+    
+    // stop webcam capturing
+    function stop_snapping() {
+      if (timer) {
+        clearTimeout( timer );
+        timer = null;
+      }
+    }
+  </script>
+</body>
+ 
+</html>
